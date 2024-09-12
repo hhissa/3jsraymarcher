@@ -66,7 +66,7 @@ float opSubtraction(float d1, float d2)
 }
 
 // Intersection
-float opIntersectio(float d1, float d2)
+float opIntersection(float d1, float d2)
 {
 	return max(d1, d2);
 }
@@ -141,8 +141,8 @@ float Thor(vec3 p) {
     torsor = rotatey(torsor, radians(0.0));
 
     float tpy = -0.05;
-    float s1 = sdEllipsoid(torsor + vec3(0.0,tpy,.1), vec3(0.7, 0.8, 0.6));
-    float s2 = sdSphere(torsor+vec3(0.0,-1.2+tpy,-.1), 0.45);
+    float s1 = sdEllipsoid(torsor + vec3(0.0,tpy+0.1,.1), vec3(0.7, 0.8, 0.6));
+    float s2 = sdSphere(torsor+vec3(0.0,-1.3+tpy,-.1), 0.45);
     float e1 = sdEllipsoid(torsor+vec3(0.0,-0.9+tpy,-0.1), vec3(0.26, 0.6, 0.26) + p.y * vec3(0.05,0.0,0.05) );
     float body = opSmoothSubtraction(s2, opSmoothUnion(s1, e1, 0.4), 0.1);
 
@@ -157,12 +157,14 @@ float Thor(vec3 p) {
     //head
     float hpy = 0.3;
     //rotating the head
-    vec3 headr = rotatex(p, radians(0.0));
+    vec3 headr = rotatex(p -vec3(0.0,1.6 - hpy,-.1), radians(-70.0));
     headr = rotatey(headr, radians(0.0));
-    float face = sdSphere(p-vec3(0.0,1.5 - hpy, -.35), 0.32);
-    float antenna = sdColumn(headr-vec3(0.0,1.5 - hpy,-.35), 0.1 ,1.0 ,0.0);
+    float face = opSubtraction(sdSphere(p-vec3(0.0,1.5 - hpy, -.35), 0.26), sdEllipsoid(p-vec3(0.0,1.5 - hpy, -.35), vec3(0.28)));
+    face = opSubtraction(sdSphere(p - vec3(0.0, 1.20, -0.47), 0.19), face);
+    face = opSubtraction(sdSphere(p - vec3(0.0, 1.4, -.5), 0.07), face);
+    float antenna = sdColumn(headr, 0.2 - p.y * 0.04 ,0.7 ,0.0);
     
-    float head = opSmoothUnion(face, antenna, 0.1);
+    float head = opSmoothUnion(face, antenna, 0.15);
     d = opUnion(d, head);
     return d;
 }
