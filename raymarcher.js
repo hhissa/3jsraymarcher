@@ -3,15 +3,16 @@ import fragShader from './shaders/raymarcher.frag'
 import vertShader from './shaders/raymarcher.vert'
 import { cameraPosition } from 'three/webgpu';
 
+
 class Raymarcher extends THREE.Mesh {
 
     constructor({ } = {}) {
         const renderPlaneGeometry = new THREE.PlaneGeometry(window.innerWidth, window.innerHeight);
         const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+
         const renderPlaneMaterial = new THREE.MeshBasicMaterial({
             transparent: true,
             map: renderTarget.texture,
-
         });
 
         super(renderPlaneGeometry, renderPlaneMaterial);

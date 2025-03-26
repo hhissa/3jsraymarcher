@@ -1,17 +1,19 @@
 import * as THREE from 'three';
 import Raymarcher from './raymarcher';
+import { SDF, AABB } from './lib/bvh';
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
 
 const renderer = new THREE.WebGLRenderer();
+const SDFParams = Array(7).fill(0.0);
+SDFParams[0] = 4.0;
+const SDF1 = new SDF(0, new THREE.Vector3(0.0, 0.0, 0.0), SDFParams);
+
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-camera.position.set(0, 0, 550);
-const raymarcher = new Raymarcher();
+// Compute AABB
+const aabb = new AABB(SDF1);
+aabb.computeBounds(renderer);
 
-
-scene.add(raymarcher);
-
-renderer.render(scene, camera);
+console.log('Min Bounds:', aabb.min);
+console.log('Max Bounds:', aabb.max);
