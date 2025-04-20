@@ -48,7 +48,6 @@ class Raymarcher extends THREE.Mesh {
         renderer.setRenderTarget(renderTarget);
         renderer.render(raymarcher, camera);
         renderer.setRenderTarget(currentRenderTarget);
-
     }
 
 }

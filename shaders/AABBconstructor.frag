@@ -1,11 +1,9 @@
-
 precision highp float;
 
 #include "primatives.glsl"
 
 layout(location = 0) out vec4 minOut;
 layout(location = 1) out vec4 maxOut;
-
 
 uniform sampler2D sdf; // SDF params (position, radius, etc.)
 
@@ -25,6 +23,8 @@ float getSDF(vec3 p) {
     switch(sdfType){
     case 0: 
         return sdSphere(p, sdfParams[0]);
+    case 1:
+        return sdBox(p, vec3(sdfParams[0], sdfParams[1], sdfParams[2]));
     }
     return -1.0;
 }
@@ -51,18 +51,18 @@ void main() {
     vec3 start = vec3(0.0); 
     vec3 dirX = vec3(1, 0, 0), dirY = vec3(0, 1.0, 0), dirZ = vec3(0, 0, 1);
 
-    // Find min/max along each axis
+    // find min/max along each axis
+    // could just min throughout
+    vec3 minX = marchDirection(start, -dirX);
+    vec3 maxX = marchDirection(start, dirX);
+    vec3 minY = marchDirection(start, -dirY);
+    vec3 maxY = marchDirection(start, dirY);
+    vec3 minZ = marchDirection(start, -dirZ);
+    vec3 maxZ = marchDirection(start, dirZ);
 
-vec3 minX = marchDirection(start, -dirX);
-vec3 maxX = marchDirection(start, dirX);
-vec3 minY = marchDirection(start, -dirY);
-vec3 maxY = marchDirection(start, dirY);
-vec3 minZ = marchDirection(start, -dirZ);
-vec3 maxZ = marchDirection(start, dirZ);
+    vec3 minBound = min(minX, minY);
+    minOut = vec4(min(minBound, minZ), 0.0);
 
-vec3 minBound = min(minX, minY);
-minOut = vec4(min(minBound, minZ), 0.0);
-
-vec3 maxBound = max(maxX, maxY);
-maxOut = vec4(max(maxBound, maxZ), 1.0);
+    vec3 maxBound = max(maxX, maxY);
+    maxOut = vec4(max(maxBound, maxZ), 0.0);
 }
