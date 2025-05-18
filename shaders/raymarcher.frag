@@ -1,10 +1,16 @@
 precision highp float;
-precision highp int;
+#include "primatives.glsl"
 
 out vec4 fragColor;
 in vec3 rd;
 uniform vec3 cameraPosition;
 uniform vec2 resolution;
+
+//texture holding objects hits per pixel for resolotion
+uniform sampler2D hitTexture;
+//texture holding sdf's and parameters
+uniform sampler2D sdfTexture;
+
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // DATA STRUCTURES //
@@ -22,7 +28,18 @@ struct RayInfo {
     vec3 dir;
 };
 
+struct SDF {
+    int type;
+    vec3 pos;
+    float params[8];
+    int op;
+    int color;
+};
 
+///////////////////////////////////////////////////////////////////////////////////////
+// GLOBAL VARIABLES //
+
+SDF hits[4];
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // INIT FUNCTIONS //
@@ -39,6 +56,10 @@ void initRayout(out RayInfo ray)
 
     ray.origin = cameraPosition;
     ray.dir = normalize( vec3( uv, 1. ) );
+}
+
+vec4 getPixel(ivec2 coord) {
+    return texelFetch(hitTexture, coord, 0);
 }
 ///////////////////////////////////////////////////////////////////////////////////////
 // BOOLEAN OPERATORS //
@@ -92,96 +113,30 @@ float opSmoothIntersection( float d1, float d2, float k )
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-//Primatives//
-
-float sdPlane( vec3 p, vec3 n, float h )
-{
-  // n must be normalized
-  return dot(p,n) + h;
-}
-
-float sdSphere( vec3 p, float s )
-{
-  return length(p)-s;
-}
-
-float sdEllipsoid( vec3 p, vec3 r )
-{
-  float k0 = length(p/r);
-  float k1 = length(p/(r*r));
-  return k0*(k0-1.0)/k1;
-}
-
-float sdColumn( vec3 p, float s, float top, float bottom) {
-    float d = length(p.xz) - (s - 0.05*p.y);
-    d=max(d, p.y -top);
-    d=max(d, -p.y -bottom);
-    return d;
-}
-
-float sdRoundCone( vec3 p, float r1, float r2, float h )
-{
-  // sampling independent computations (only depend on shape)
-  float b = (r1-r2)/h;
-  float a = sqrt(1.0-b*b);
-
-  // sampling dependant computations
-  vec2 q = vec2( length(p.xz), p.y );
-  float k = dot(q,vec2(-b,a));
-  if( k<0.0 ) return length(q) - r1;
-  if( k>a*h ) return length(q-vec2(0.0,h)) - r2;
-  return dot(q, vec2(a,b) ) - r1;
-}
-
-float Thor(vec3 p) {
-    float d;
-
-    //torso
-
-    //rotating the torso
-    vec3 torsor = rotatex(p, radians(65.0));
-    torsor = rotatey(torsor, radians(0.0));
-
-    float tpy = -0.05;
-    float s1 = sdEllipsoid(torsor + vec3(0.0,tpy+0.1,.1), vec3(0.7, 0.8, 0.6));
-    float s2 = sdSphere(torsor+vec3(0.0,-1.3+tpy,-.1), 0.45);
-    float e1 = sdEllipsoid(torsor+vec3(0.0,-0.9+tpy,-0.1), vec3(0.26, 0.6, 0.26) + p.y * vec3(0.05,0.0,0.05) );
-    float body = opSmoothSubtraction(s2, opSmoothUnion(s1, e1, 0.4), 0.1);
-
-    //legs
-    //mirroring the leg across the x axis
-    vec3 mirroredleg = vec3(abs(p.x), p.y, p.z);
-    float leg = sdColumn(mirroredleg-vec3(0.3, -1.0,0.0), 0.2, 0.8, 0.0);
-    float thigh = sdEllipsoid(mirroredleg-vec3(0.43, -0.4, 0.0), vec3(0.1, 0.2, 0.2));
-    float lower = opSmoothUnion(thigh, leg, 0.1);
-    d = opSmoothUnion(lower,body, 0.3);
-
-    //head
-    float hpy = 0.3;
-    //rotating the head
-    vec3 headr = rotatex(p -vec3(0.0,1.6 - hpy,-.1), radians(-70.0));
-    headr = rotatey(headr, radians(0.0));
-    float face = opSubtraction(sdSphere(p-vec3(0.0,1.5 - hpy, -.35), 0.26), sdEllipsoid(p-vec3(0.0,1.5 - hpy, -.35), vec3(0.28)));
-    face = opSubtraction(sdSphere(p - vec3(0.0, 1.20, -0.47), 0.19), face);
-    face = opSubtraction(sdSphere(p - vec3(0.0, 1.4, -.5), 0.07), face);
-    float antenna = sdColumn(headr, 0.2 - p.y * 0.04 ,0.7 ,0.0);
     
-    float head = opSmoothUnion(face, antenna, 0.15);
-    d = opUnion(d, head);
+// Compute SDF distance for different types
+float evalSDF(vec3 p, SDF hit) {
+    switch(hit.type){
+    case 0: 
+        return sdSphere(p, hit.params[0]);
+    case 1:
+        return sdBox(p, vec3(hit.params[0], hit.params[1], hit.params[2]));
+    }
+    return -1.0;
+}
+
+
+//for calculating distances/shadows
+float map(vec3 p) {
+    float d = 9999.0;
+    for (int i = 0; i < 4; ++i) {
+        if (hits[i].type == -1) continue;
+        d = min(d, evalSDF(p, hits[i]));
+    }
     return d;
 }
 
-//TODO: object management
-float map(vec3 p) {
-    vec3 rot = rotatex(p, radians(0.0));
-    rot = rotatey(rot, radians(0.0));
-    float thor = Thor(rot);
-    float p1 = sdPlane(p, vec3(0.0, 1.0, 0.0), 1.0);
-    return opUnion(thor, p1);
-}
 
-
-//get normal using finite difference
 vec3 normal(in vec3 p, float d) {
     float offset = 0.001;
     vec3 distances = vec3(
@@ -250,21 +205,20 @@ void calcLighting(inout vec4 color, in vec3 p, in vec3 norm) {
 // when d.z is distance lighting is fucked
 vec4 march(out vec3 p, in RayInfo ray) {
     float distance = 0.0;
+    float g = 1.0;
     int i;
     vec4 d = vec4(0.0);
     for(i = 0; i < MAX_STEPS && distance < MAX_DISTANCE; i++) {
         p = ray.origin + ray.dir * distance;
         d.z = map(p);
         if (d.z <= MIN_DISTANCE) {
-
             return d;
         }
         distance += d.z;
     }
 
-    return vec4(0.0, 0.0, -1.0, i);
+    return vec4(0.0, 0.0, 0.0, -1.0);
 }
-
 
 //get material
 void getMaterial() {
@@ -273,6 +227,41 @@ void getMaterial() {
 //get miss ray color
 void getMissColor() {
 
+}
+
+void loadSDFData() {
+    vec4 hitIndices = texelFetch(hitTexture, ivec2(gl_FragCoord.xy), 0);
+
+    for (int i = 0; i < 4; ++i) {
+        int index = int(hitIndices[i]);
+        if (index == -1) {
+            hits[i].type = -1;
+            continue;
+        }
+
+        // Each SDF takes 4 texels = 16 floats
+        int baseY = index;
+
+        vec4 col0 = texelFetch(sdfTexture, ivec2(0, baseY), 0);
+        vec4 col1 = texelFetch(sdfTexture, ivec2(1, baseY), 0);
+        vec4 col2 = texelFetch(sdfTexture, ivec2(2, baseY), 0);
+        vec4 col3 = texelFetch(sdfTexture, ivec2(3, baseY), 0);
+
+        hits[i].pos = col0.xyz;
+        hits[i].type = int(col0.w);
+
+        hits[i].params[0] = col1.x;
+        hits[i].params[1] = col1.y;
+        hits[i].params[2] = col1.z;
+        hits[i].params[3] = col1.w;
+        hits[i].params[4] = col2.x;
+        hits[i].params[5] = col2.y;
+        hits[i].params[6] = col2.z;
+        hits[i].params[7] = col2.w;
+
+        hits[i].op = int(col3.x);
+        hits[i].color = int(col3.y);
+    }
 }
 
 //draw pixel
@@ -290,7 +279,7 @@ void draw(inout vec4 color, in RayInfo ray) {
 void main() {
     RayInfo ray;
     vec4 color = vec4(1.0);
-
+    loadSDFData();
     initRayout(ray);
     initLight();
     draw(color, ray);
