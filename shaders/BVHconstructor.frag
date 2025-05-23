@@ -23,10 +23,10 @@ AABBNode getBVHNode(int index) {
     return AABBNode(
         _minBound.xyz,    // minBound
         _maxBound.xyz,    // maxBound
-        int(_treeIndices.x),
-        int(_treeIndices.y),
-        int(_treeIndices.z),
-        int(_treeIndices.w)
+        int(_treeIndices.x), //tree index
+        int(_treeIndices.y), //left index in tree
+        int(_treeIndices.z), //right index in tree
+        int(_treeIndices.w)  //index in CPU SDF list
     ); 
 }
 
@@ -66,7 +66,6 @@ int evaluateSDF(inout vec3 ro, vec3 rd) {
         }
 
         if (node.left == -1 && node.right == -1) {
-            // Leaf node → Evaluate SDF
             return node.sdfIndex;
         } else {
             // Push child nodes onto stack

@@ -7,11 +7,14 @@ const renderer = new THREE.WebGLRenderer();
 const SDFParams = Array(7).fill(0.0);
 SDFParams[0] = 1.0;
 
-const SDF1 = [new SDF(0, new THREE.Vector3(0.0, 0.0, 0.0), SDFParams),
-new SDF(0, new THREE.Vector3(0.0, 0.0, -2.0), SDFParams),
-new SDF(0, new THREE.Vector3(0.0, 0.0, -4.0), SDFParams),
-new SDF(0, new THREE.Vector3(0.0, 0.0, -6.0), SDFParams),
+//first object not rendering
+const SDF1 = [new SDF(0.0, new THREE.Vector3(0.0, 0.0, -10.0), SDFParams),
+new SDF(0.0, new THREE.Vector3(0.0, 0.0, -14.0), SDFParams),
+new SDF(0.0, new THREE.Vector3(0.0, 0.0, -18.0), SDFParams),
+new SDF(0.0, new THREE.Vector3(3.0, 0.0, -10.0), SDFParams),
+new SDF(0.0, new THREE.Vector3(-3.0, 0.0, -10.0), SDFParams),
 ];
+
 
 const factory = new BVHFactory(SDF1);
 
@@ -23,7 +26,7 @@ BVHlist.forEach((aabb) => {
 });
 
 var BVHtexture = factory.flattenBVHTexture(BVHlist, SDF1);
-var SceneTexture = factory.createSceneTexture(renderer, BVHtexture, [0.0, 0.0, 8.0])
+var SceneTexture = factory.createSceneTexture(renderer, BVHtexture, [0.0, 0.0, 0.0])
 var SDFTexture = factory.createObjectTexture(SDF1);
 
 renderer.setSize(window.innerWidth, window.innerHeight);

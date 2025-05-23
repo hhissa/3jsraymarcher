@@ -7,7 +7,7 @@ import { cameraPosition } from 'three/webgpu';
 class Raymarcher extends THREE.Mesh {
 
     constructor(tex, sdfTex) {
-        const renderPlaneGeometry = new THREE.PlaneGeometry(window.innerWidth, window.innerHeight);
+        const renderPlaneGeometry = new THREE.PlaneGeometry(2, 2);
         const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
 
         const renderPlaneMaterial = new THREE.MeshBasicMaterial({
@@ -23,16 +23,16 @@ class Raymarcher extends THREE.Mesh {
             fragmentShader: fragShader,
             uniforms: {
                 cameraFov: { value: 90 },
-                cameraPosition: { value: new THREE.Vector3(0.0, 1.0, -4.0) },
+                cameraPosition: { value: new THREE.Vector3(0.0, 0.0, 0.0) },
                 maxSteps: { value: 1000 },
                 resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
                 hitTexture: { value: tex.texture },
-                sdfTexture: { value: sdfTex.texture }
+                sdfTexture: { value: sdfTex }
             },
             defines: {
                 EPSILON: '0.1',
                 MAX_DISTANCE: '100.0',
-                MIN_DISTANCE: '0.001',
+                MIN_DISTANCE: '0.01',
                 MAX_STEPS: 1000
             }
         });

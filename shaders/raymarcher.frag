@@ -5,6 +5,7 @@ out vec4 fragColor;
 in vec3 rd;
 uniform vec3 cameraPosition;
 uniform vec2 resolution;
+uniform float cameraFov;
 
 //texture holding objects hits per pixel for resolotion
 uniform sampler2D hitTexture;
@@ -49,13 +50,38 @@ void initLight() {
     light.direction = vec3(0.0,.5, -.2);
 }
 
+// void initRayout(out RayInfo ray) 
+// {
+//     vec2 uv = (gl_FragCoord.xy / resolution.xy) * 2.0 - 1.0; // [-1,1]
+//     uv.x *= resolution.x / resolution.y;                     // aspect correction
+
+//     ray.origin = cameraPosition;
+
+//     // Convert fov to radians and get half angles
+//     float fovRad = radians(cameraFov);
+//     float halfHeight = tan(fovRad / 2.0);
+//     float halfWidth = halfHeight * (resolution.x / resolution.y);
+
+//     // Camera coordinate system
+//     vec3 forward = normalize(vec3(0.0, 0.0, -1.0));  // assuming looking down -Z
+//     vec3 right = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));
+//     vec3 up = normalize(cross(right, forward));
+
+//     // Build ray direction
+//     ray.dir = normalize(
+//         forward 
+//         + uv.x * halfWidth * right 
+//         + uv.y * halfHeight * up
+//     );
+// }
+
 void initRayout(out RayInfo ray) 
 {
-    vec2 uv = ( gl_FragCoord.xy / resolution.xy ) * 2.0 - 1.0;
-    uv.x *= resolution.x / resolution.y;
+    vec2 uv = ( gl_FragCoord.xy / resolution.xy ) * 2.0 - 1.0;  // [-1,1] coords
+    uv.x *= resolution.x / resolution.y;                        // correct aspect ratio
 
     ray.origin = cameraPosition;
-    ray.dir = normalize( vec3( uv, 1. ) );
+    ray.dir = normalize(vec3(uv, -1.0));
 }
 
 vec4 getPixel(ivec2 coord) {
@@ -118,24 +144,27 @@ float opSmoothIntersection( float d1, float d2, float k )
 float evalSDF(vec3 p, SDF hit) {
     switch(hit.type){
     case 0: 
-        return sdSphere(p, hit.params[0]);
+        return sdSphere(p - hit.pos, hit.params[0]);
     case 1:
-        return sdBox(p, vec3(hit.params[0], hit.params[1], hit.params[2]));
+        return sdBox(p - hit.pos, vec3(hit.params[0], hit.params[1], hit.params[2]));
     }
-    return -1.0;
+    return 9999.0;
 }
 
 
-//for calculating distances/shadows
 float map(vec3 p) {
     float d = 9999.0;
-    for (int i = 0; i < 4; ++i) {
-        if (hits[i].type == -1) continue;
-        d = min(d, evalSDF(p, hits[i]));
-    }
+    // for (int i = 0; i < 4; ++i) {
+    //     if (hits[i].type == -1) continue;
+    //     d = opUnion(d, evalSDF(p, hits[0]));
+    // }
+    d = min(d, evalSDF(p, hits[0]));
     return d;
 }
 
+// float map(vec3 p) {
+//     return sdSphere(p - vec3(0,0, 12.0), 2.0);
+// }
 
 vec3 normal(in vec3 p, float d) {
     float offset = 0.001;
@@ -201,11 +230,8 @@ void calcLighting(inout vec4 color, in vec3 p, in vec3 norm) {
     
 }
 
-//refactor to only return distance
-// when d.z is distance lighting is fucked
 vec4 march(out vec3 p, in RayInfo ray) {
     float distance = 0.0;
-    float g = 1.0;
     int i;
     vec4 d = vec4(0.0);
     for(i = 0; i < MAX_STEPS && distance < MAX_DISTANCE; i++) {
@@ -217,7 +243,7 @@ vec4 march(out vec3 p, in RayInfo ray) {
         distance += d.z;
     }
 
-    return vec4(0.0, 0.0, 0.0, -1.0);
+    return vec4(0.0, 0.0, -1.0, i);
 }
 
 //get material
@@ -239,7 +265,7 @@ void loadSDFData() {
             continue;
         }
 
-        // Each SDF takes 4 texels = 16 floats
+        // SDF takes 4 texels = 16 floats
         int baseY = index;
 
         vec4 col0 = texelFetch(sdfTexture, ivec2(0, baseY), 0);
@@ -272,20 +298,20 @@ void draw(inout vec4 color, in RayInfo ray) {
         color = vec4(1.0, 0.0, 0.0, 1.0);
         vec3 norm = normal(p, d.z); 
         calcLighting(color, p, norm);
+    } else {
+        color = vec4(1.0);
     }
     
 }
 
 void main() {
     RayInfo ray;
-    vec4 color = vec4(1.0);
+    vec4 color = vec4(0.0);
     loadSDFData();
     initRayout(ray);
     initLight();
     draw(color, ray);
-
     //gamma correction
     color.xyz = pow( color.xyz, vec3(1.0/2.2));
-
     fragColor = color;
 }
