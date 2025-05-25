@@ -58,17 +58,17 @@ void initLight() {
 
 //     ray.origin = cameraPosition;
 
-//     // Convert fov to radians and get half angles
+//     
 //     float fovRad = radians(cameraFov);
 //     float halfHeight = tan(fovRad / 2.0);
 //     float halfWidth = halfHeight * (resolution.x / resolution.y);
 
-//     // Camera coordinate system
+//    
 //     vec3 forward = normalize(vec3(0.0, 0.0, -1.0));  // assuming looking down -Z
 //     vec3 right = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));
 //     vec3 up = normalize(cross(right, forward));
 
-//     // Build ray direction
+//    
 //     ray.dir = normalize(
 //         forward 
 //         + uv.x * halfWidth * right 
