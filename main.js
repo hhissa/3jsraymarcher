@@ -9,8 +9,8 @@ SDFParams[0] = 1.0;
 
 //first object not rendering
 const SDF1 = [new SDF(0.0, new THREE.Vector3(0.0, 0.0, -10.0), SDFParams),
-new SDF(0.0, new THREE.Vector3(0.0, 0.0, -14.0), SDFParams),
-new SDF(0.0, new THREE.Vector3(0.0, 0.0, -18.0), SDFParams),
+new SDF(0.0, new THREE.Vector3(0.0, 1.0, -14.0), SDFParams),
+new SDF(0.0, new THREE.Vector3(1.0, 1.0, -18.0), SDFParams),
 new SDF(0.0, new THREE.Vector3(3.0, 0.0, -10.0), SDFParams),
 new SDF(0.0, new THREE.Vector3(-3.0, 0.0, -10.0), SDFParams),
 ];

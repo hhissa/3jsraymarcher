@@ -41,6 +41,7 @@ struct SDF {
 // GLOBAL VARIABLES //
 
 SDF hits[4];
+vec4 hitIndices;
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // INIT FUNCTIONS //
@@ -154,11 +155,10 @@ float evalSDF(vec3 p, SDF hit) {
 
 float map(vec3 p) {
     float d = 9999.0;
-    // for (int i = 0; i < 4; ++i) {
-    //     if (hits[i].type == -1) continue;
-    //     d = opUnion(d, evalSDF(p, hits[0]));
-    // }
-    d = min(d, evalSDF(p, hits[0]));
+    for (int i = 0; i < 4; ++i) {
+        if (hits[i].type == -1) continue;
+        d = opUnion(d, evalSDF(p, hits[i]));
+    }
     return d;
 }
 
@@ -256,7 +256,7 @@ void getMissColor() {
 }
 
 void loadSDFData() {
-    vec4 hitIndices = texelFetch(hitTexture, ivec2(gl_FragCoord.xy), 0);
+    hitIndices = texelFetch(hitTexture, ivec2(gl_FragCoord.xy), 0);
 
     for (int i = 0; i < 4; ++i) {
         int index = int(hitIndices[i]);
@@ -312,6 +312,7 @@ void main() {
     initLight();
     draw(color, ray);
     //gamma correction
-    color.xyz = pow( color.xyz, vec3(1.0/2.2));
+
+    // color.xyz = pow( color.xyz, vec3(1.0/2.2));
     fragColor = color;
 }

@@ -44,7 +44,7 @@ bool intersectAABB(inout vec3 ro, vec3 rd, vec3 minBound, vec3 maxBound) {
 
     if(tNear <= tFar && tFar >= 0.0) 
     {
-        ro = ro + rd * tFar;
+        ro = ro + rd * (tFar*1.01);
         return true;
     }
     return false;
