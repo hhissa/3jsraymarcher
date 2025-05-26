@@ -2,8 +2,9 @@ precision highp float;
 uniform sampler2D aabb;
 uniform vec3 cameraPos;
 uniform vec2 resolution;
-
 out vec4 hit;
+
+float hits[MAXHITS];
 
 struct AABBNode {
     vec3 minBound;
@@ -11,7 +12,7 @@ struct AABBNode {
     int index;
     int left;
     int right;
-    int sdfIndex;
+    float sdfIndex;
 };
 
 AABBNode getBVHNode(int index) {
@@ -26,12 +27,12 @@ AABBNode getBVHNode(int index) {
         int(_treeIndices.x), //tree index
         int(_treeIndices.y), //left index in tree
         int(_treeIndices.z), //right index in tree
-        int(_treeIndices.w)  //index in CPU SDF list
+        _treeIndices.w  //index in CPU SDF list
     ); 
 }
 
 // Bounding box intersection test
-bool intersectAABB(inout vec3 ro, vec3 rd, vec3 minBound, vec3 maxBound) {
+bool intersectAABB(vec3 ro, vec3 rd, vec3 minBound, vec3 maxBound) {
     //distance to the planes
     vec3 tMin = (minBound - ro) / rd;
     vec3 tMax = (maxBound - ro) / rd;
@@ -42,40 +43,33 @@ bool intersectAABB(inout vec3 ro, vec3 rd, vec3 minBound, vec3 maxBound) {
     float tNear = max(max(t1.x, t1.y), t1.z);
     float tFar  = min(min(t2.x, t2.y), t2.z);
 
-    if(tNear <= tFar && tFar >= 0.0) 
-    {
-        ro = ro + rd * (tFar*1.01);
-        return true;
-    }
-    return false;
+    return (tNear <= tFar && tFar >= 0.0); 
 }
 
 // BVH traversal for raymarching
-int evaluateSDF(inout vec3 ro, vec3 rd) {
+void evaluateSDF(vec3 ro, vec3 rd) {
     int stack[64];
     int stackPtr = 0;
+    int hitsCounter = 0;
     stack[stackPtr++] = 0;  // Start at root 
 
     while (stackPtr > 0) {
         int nodeIndex = stack[--stackPtr];
         AABBNode node = getBVHNode(nodeIndex);
-        vec3 oldro = ro;
 
         if (!intersectAABB(ro, rd, node.minBound, node.maxBound)) {
             continue;
         }
 
         if (node.left == -1 && node.right == -1) {
-            return node.sdfIndex;
+            hits[hitsCounter] = node.sdfIndex;
+            hitsCounter += 1;
         } else {
             // Push child nodes onto stack
             if (node.left != -1) stack[stackPtr++] = node.left;
             if (node.right != -1) stack[stackPtr++] = node.right;
-            ro = oldro;
         }
     }
-
-    return -1;
 }
 
 void main()
@@ -85,21 +79,14 @@ void main()
 
     vec3 rayOrigin = cameraPos;
     vec3 rayDir = normalize( vec3( uv, -1. ) );
+    float didHit = 0.0;
 
-    int didHit = 0;
-    float hits[4];
-
-    hits[0] = -1.0;
-    hits[1] = -1.0;
-    hits[2] = -1.0;
-    hits[3] = -1.0;
-
-    for (int i = 0; i < 4; i++)
+    for(int i = 0; i < MAXHITS; i++)
     {
-        didHit = evaluateSDF(rayOrigin, rayDir);
-        if(didHit < 0) break;
-        hits[i] = float(didHit);
+        hits[i] = -1.0;
     }
+
+    evaluateSDF(rayOrigin, rayDir);
 
     hit = vec4(hits[0], hits[1], hits[2], hits[3]);
 }
